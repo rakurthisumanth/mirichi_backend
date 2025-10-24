@@ -1,6 +1,9 @@
 import swaggerUi from 'swagger-ui-express';
 
-// Minimal OpenAPI spec covering existing endpoints
+// Build servers based on current env
+const PORT = process.env.PORT || '3002';
+const HOST = process.env.HOST || 'localhost';
+
 const openapiSpec = {
   openapi: '3.0.3',
   info: {
@@ -8,7 +11,8 @@ const openapiSpec = {
     version: '1.0.0',
   },
   servers: [
-    { url: 'http://0.0.0.0:{port}', variables: { port: { default: '3000' } } },
+    { url: `http://${HOST}:${PORT}` },
+    { url: `http://localhost:${PORT}` },
   ],
   paths: {
     '/api/createBuyingStockByCustomer': {
@@ -56,7 +60,10 @@ const openapiSpec = {
           }
         },
         responses: {
-          '201': { description: 'Created' },
+          '201': {
+            description: 'Created',
+            content: { 'application/json': { schema: { type: 'object', properties: { _id: { type: 'string' }, message: { type: 'string' } } } } }
+          },
           '400': { description: 'Validation error' }
         }
       }
@@ -80,7 +87,10 @@ const openapiSpec = {
           }
         },
         responses: {
-          '200': { description: 'Results returned' },
+          '200': {
+            description: 'Results returned',
+            content: { 'application/json': { schema: { type: 'object', properties: { count: { type: 'integer' }, data: { type: 'array', items: { type: 'object' } } } } } }
+          },
           '400': { description: 'Validation error' }
         }
       }
@@ -137,7 +147,10 @@ const openapiSpec = {
           }
         },
         responses: {
-          '200': { description: 'Customers found' },
+          '200': {
+            description: 'Customers found',
+            content: { 'application/json': { schema: { type: 'object', properties: { count: { type: 'integer' }, data: { type: 'array', items: { type: 'object' } } } } } }
+          },
           '404': { description: 'No customers found' }
         }
       }
@@ -161,7 +174,26 @@ const openapiSpec = {
           },
         },
         responses: {
-          '200': { description: 'Login successful' },
+          '200': {
+            description: 'Login successful',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    message: { type: 'string' },
+                    user: {
+                      type: 'object',
+                      properties: {
+                        username: { type: 'string' },
+                        id: { type: 'string' }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
           '401': { description: 'Invalid credentials' },
         },
       },
@@ -186,7 +218,12 @@ const openapiSpec = {
             },
           },
         },
-        responses: { '201': { description: 'Created' } },
+        responses: {
+          '201': {
+            description: 'Created',
+            content: { 'application/json': { schema: { type: 'object', properties: { _id: { type: 'string' }, name: { type: 'string' }, mobile_number: { type: 'string' }, village: { type: 'string' }, no_of_bags: { type: 'number' } } } } }
+          }
+        },
       },
     },
     '/api/customers': {
@@ -208,7 +245,12 @@ const openapiSpec = {
             },
           },
         },
-        responses: { '201': { description: 'Created' } },
+        responses: {
+          '201': {
+            description: 'Created',
+            content: { 'application/json': { schema: { type: 'object', properties: { _id: { type: 'string' }, customer_name: { type: 'string' }, phone_number: { type: 'string' }, buy_bags: { type: 'number' } } } } }
+          }
+        },
       },
     },
   },
