@@ -30,8 +30,11 @@ export async function connectDB(uri, dbName = process.env.DB_NAME, clientOptions
   const finalUri = uri || process.env.MONGODB_URI || process.env.MONGO_URI;
   if (!finalUri) throw new Error('MONGO_URI not provided');
 
-  const envOpts = buildMongoOptionsFromEnv();
-  client = new MongoClient(finalUri, { ...envOpts, ...clientOptions });
+  client = new MongoClient(finalUri,{ ssl: true,
+  tlsAllowInvalidCertificates: false, // true only if you use self-signed cert
+  useNewUrlParser: true,
+  useUnifiedTopology: true}
+);
   await client.connect();
   // Prefer explicit DB_NAME if provided; else use DB from URI
   db = dbName ? client.db(dbName) : client.db();
