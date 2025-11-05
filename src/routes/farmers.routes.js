@@ -7,14 +7,10 @@ const router = Router();
 router.post('/farmers', async (req, res) => {
   try {
     const farmers = req.app.locals.farmers;
-    const { farmer_id } = req.body ;
+    const { farmer_id } = req.body;
 
-    // If farmer_id is provided, perform an update (partial update allowed)
-    if (farmer_id!=null) {
-      // Validate ObjectId string
-      if (typeof farmer_id !== 'string' || !/^[a-fA-F0-9]{24}$/.test(farmer_id)) {
-        return res.status(400).json({ message: 'Invalid farmer_id format' });
-      }
+    // Only perform update if farmer_id is a valid, non-empty string
+    if (typeof farmer_id === 'string' && farmer_id.trim() && /^[a-fA-F0-9]{24}$/.test(farmer_id)) {
       const _id = new ObjectId(farmer_id);
 
       // Build update doc excluding identifiers
@@ -48,17 +44,18 @@ router.post('/farmers', async (req, res) => {
     if (existing) {
       return res.status(400).json({ message: 'Farmer already exists' });
     }
+    let arr_bags=req.body.variety_bags;
+    console.log(arr_bags,"arr_bags")
 
     // Generate an ObjectId and mirror it in farmer_id for easy reference
     const _id = new ObjectId();
     const doc = {
       _id,
       farmer_id: _id.toHexString(),
-      farmer_name,
-      farmer_phone,
-      farmer_village,
-      // include any extra fields sent in body
-      ...req.body,
+      farmer_name: req.body.farmer_name,
+      farmer_phone: req.body.farmer_phone,
+      farmer_village: req.body.farmer_village,
+      variety_bags: req.body.variety_bags,
     };
 
     const result = await farmers.insertOne(doc);
