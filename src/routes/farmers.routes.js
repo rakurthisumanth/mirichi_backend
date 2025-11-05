@@ -7,10 +7,10 @@ const router = Router();
 router.post('/farmers', async (req, res) => {
   try {
     const farmers = req.app.locals.farmers;
-    const { farmer_id } = req.body || {};
+    const { farmer_id } = req.body ;
 
     // If farmer_id is provided, perform an update (partial update allowed)
-    if (farmer_id) {
+    if (farmer_id!=null) {
       // Validate ObjectId string
       if (typeof farmer_id !== 'string' || !/^[a-fA-F0-9]{24}$/.test(farmer_id)) {
         return res.status(400).json({ message: 'Invalid farmer_id format' });
