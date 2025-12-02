@@ -22,6 +22,7 @@ router.post('/createBuyingStockByCustomer', async (req, res) => {
     if (!coll || !farmersColl) return res.status(500).json({ message: 'Collection not initialized' });
 
     const {
+      bill_id,
       buyer_name,
       buyer_contact,
       details,
@@ -37,6 +38,7 @@ router.post('/createBuyingStockByCustomer', async (req, res) => {
 
     // 1. Insert the billing record as before
     const doc = {
+      bill_id: String(bill_id).trim(),
       buyer_name: String(buyer_name).trim(),
       buyer_contact: String(buyer_contact).trim(),
       details: details,
