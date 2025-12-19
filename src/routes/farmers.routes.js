@@ -34,8 +34,8 @@ router.post('/farmers', async (req, res) => {
     }
 
     // CREATE flow (no farmer_id provided) → enforce required fields
-    const { farmer_name, farmer_phone, farmer_village } = req.body || {};
-    if (!farmer_name || !farmer_phone || !farmer_village) {
+    const { farmer_name, farmer_phone, farmer_village ,farmer_date} = req.body || {};
+    if (!farmer_name || !farmer_phone || !farmer_village || farmer_date) {
       return res.status(400).json({ message: 'farmer_name, farmer_phone, farmer_village are required' });
     }
 
@@ -55,6 +55,7 @@ router.post('/farmers', async (req, res) => {
       farmer_name: req.body.farmer_name,
       farmer_phone: req.body.farmer_phone,
       farmer_village: req.body.farmer_village,
+      farmer_date: req.body.farmer_date,
       variety_bags: req.body.variety_bags,
     };
 
