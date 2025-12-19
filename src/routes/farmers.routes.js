@@ -8,6 +8,7 @@ router.post('/farmers', async (req, res) => {
   try {
     const farmers = req.app.locals.farmers;
     const { farmer_id } = req.body;
+    console.log(req.body),"Request Body";
 
     // Only perform update if farmer_id is a valid, non-empty string
     if (typeof farmer_id === 'string' && farmer_id.trim() && /^[a-fA-F0-9]{24}$/.test(farmer_id)) {
@@ -35,7 +36,8 @@ router.post('/farmers', async (req, res) => {
 
     // CREATE flow (no farmer_id provided) → enforce required fields
     const { farmer_name, farmer_phone, farmer_village ,farmer_date} = req.body || {};
-    if (!farmer_name || !farmer_phone || !farmer_village || farmer_date) {
+    if (!farmer_name || !farmer_phone || !farmer_village || !farmer_date) {
+      console.log("Missing Fields");
       return res.status(400).json({ message: 'farmer_name, farmer_phone, farmer_village are required' });
     }
 

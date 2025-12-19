@@ -8,6 +8,7 @@ const router = Router();
 router.post('/getBuyingStockByCustomerByDate', async (req, res) => {
   try {
     const { from_date, to_date, buyer_name } = req.body || {};
+
     if (!from_date) {
       return res.status(400).json({ message: 'from_date is required' });
     }
@@ -17,73 +18,64 @@ router.post('/getBuyingStockByCustomerByDate', async (req, res) => {
       return res.status(500).json({ message: 'Collection not initialized' });
     }
 
+    // ---- DATE VALIDATION ----
     const start = new Date(from_date);
     if (isNaN(start.getTime())) {
       return res.status(400).json({ message: 'from_date is invalid' });
     }
 
-    let end;
-    if (to_date) {
-      end = new Date(to_date);
-      if (isNaN(end.getTime())) {
-        return res.status(400).json({ message: 'to_date is invalid' });
-      }
-    } else {
-      end = new Date(start);
+    const end = to_date ? new Date(to_date) : new Date(start);
+    if (isNaN(end.getTime())) {
+      return res.status(400).json({ message: 'to_date is invalid' });
     }
 
-    // Inclusive date range
-    const startOfDay = new Date(start);
-    startOfDay.setHours(0, 0, 0, 0);
+    start.setHours(0, 0, 0, 0);
+    end.setHours(23, 59, 59, 999);
 
-    const endOfDay = new Date(end);
-    endOfDay.setHours(23, 59, 59, 999);
-
-    // Match filter
+    // ---- MATCH STAGE ----
     const matchStage = {
-      date: { $gte: startOfDay, $lte: endOfDay },
+      date: { $gte: start, $lte: end }
     };
 
     if (buyer_name && buyer_name.trim()) {
       matchStage.buyer_name = {
         $regex: buyer_name.trim(),
-        $options: "i",
+        $options: 'i'
       };
     }
 
+    // ---- AGGREGATION PIPELINE ----
     const pipeline = [
       { $match: matchStage },
 
-      // Sort by latest date first
+      // Latest record first
       { $sort: { date: -1 } },
 
+      // Group by buyer
       {
         $group: {
           _id: "$buyer_contact",
 
           buyer_name: { $first: "$buyer_name" },
           buyer_contact: { $first: "$buyer_contact" },
-
-          // LATEST values
           date: { $first: "$date" },
           bill_id: { $first: "$bill_id" },
 
-          // COMBINED details
-          detailsArrays: { $push: "$details" },
-
-          // SUM totals
           total_base_price: { $sum: "$total_base_price" },
           commission: { $sum: "$commission" },
           bags_price: { $sum: "$bags_price" },
           total_net_amount: { $sum: "$total_net_amount" },
+
+          details: { $push: "$details" }
         }
       },
 
+      // Flatten details array
       {
         $addFields: {
           details: {
             $reduce: {
-              input: "$detailsArrays",
+              input: "$details",
               initialValue: [],
               in: { $concatArrays: ["$$value", "$$this"] }
             }
@@ -91,6 +83,94 @@ router.post('/getBuyingStockByCustomerByDate', async (req, res) => {
         }
       },
 
+      // Unwind details
+      { $unwind: "$details" },
+      { $unwind: "$details.variety_details" },
+
+      // 🔥 Merge same farmer + variety + rate
+      {
+        $group: {
+          _id: {
+            buyer_contact: "$buyer_contact",
+            farmer_id: "$details.farmer_id",
+            farmer_name: "$details.farmer_name",
+            variety: "$details.variety_details.variety",
+            rate: "$details.variety_details.rate"
+          },
+
+          buyer_name: { $first: "$buyer_name" },
+          buyer_contact: { $first: "$buyer_contact" },
+          date: { $first: "$date" },
+          bill_id: { $first: "$bill_id" },
+
+          total_base_price: { $first: "$total_base_price" },
+          commission: { $first: "$commission" },
+          bags_price: { $first: "$bags_price" },
+          total_net_amount: { $first: "$total_net_amount" },
+
+          bags: { $sum: "$details.variety_details.bags" },
+          weight: {
+            $sum: { $toDouble: "$details.variety_details.weight" }
+          }
+        }
+      },
+
+      // Build variety_details array
+      {
+        $group: {
+          _id: {
+            buyer_contact: "$buyer_contact",
+            farmer_id: "$_id.farmer_id",
+            farmer_name: "$_id.farmer_name"
+          },
+
+          buyer_name: { $first: "$buyer_name" },
+          buyer_contact: { $first: "$buyer_contact" },
+          date: { $first: "$date" },
+          bill_id: { $first: "$bill_id" },
+
+          total_base_price: { $first: "$total_base_price" },
+          commission: { $first: "$commission" },
+          bags_price: { $first: "$bags_price" },
+          total_net_amount: { $first: "$total_net_amount" },
+
+          variety_details: {
+            $push: {
+              variety: "$_id.variety",
+              rate: "$_id.rate",
+              bags: "$bags",
+              weight: { $toString: "$weight" }
+            }
+          }
+        }
+      },
+
+      // Build details array
+      {
+        $group: {
+          _id: "$buyer_contact",
+
+          buyer_name: { $first: "$buyer_name" },
+          buyer_contact: { $first: "$buyer_contact" },
+          date: { $first: "$date" },
+          bill_id: { $first: "$bill_id" },
+
+          total_base_price: { $first: "$total_base_price" },
+          commission: { $first: "$commission" },
+          bags_price: { $first: "$bags_price" },
+          total_net_amount: { $first: "$total_net_amount" },
+
+          details: {
+            $push: {
+              farmer_id: "$_id.farmer_id",
+              farmer_name: "$_id.farmer_name",
+              variety_details: "$variety_details"
+            }
+          }
+        }
+      },
+
+      // Final output
       {
         $project: {
           _id: 0,
@@ -107,18 +187,19 @@ router.post('/getBuyingStockByCustomerByDate', async (req, res) => {
       }
     ];
 
-    const results = await coll.aggregate(pipeline).toArray();
+    const data = await coll.aggregate(pipeline).toArray();
 
     return res.status(200).json({
-      count: results.length,
-      data: results
+      count: data.length,
+      data
     });
 
   } catch (err) {
     console.error(err);
-    return res.status(500).json({ message: "Internal Server Error" });
+    return res.status(500).json({ message: 'Internal Server Error' });
   }
 });
+
 
 
 
