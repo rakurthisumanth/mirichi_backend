@@ -46,12 +46,8 @@ router.post('/customers', async (req, res) => {
         message: "Customer updated successfully",
       });
     }
-
-    /* ================================
-       CREATE CUSTOMER (buyer_id missing)
-       ================================ */
-
-    // check duplicate customer
+  
+else{
     const existingCustomer = await customers.findOne({
       buyer_name,
       buyer_contact_number,
@@ -66,7 +62,7 @@ router.post('/customers', async (req, res) => {
     // generate new buyer_id
     const newBuyerId = new ObjectId().toString()
 
-    const insertResult = await customers.insertOne({
+   await customers.insertOne({
       buyer_id: newBuyerId,
       buyer_name,
       buyer_contact_number,
@@ -80,6 +76,8 @@ router.post('/customers', async (req, res) => {
       message: "Customer created successfully",
       buyer_id: newBuyerId
     });
+}
+
   } catch (err) {
     console.error(err);
     return res.status(500).json({ message: "Internal Server Error" });
